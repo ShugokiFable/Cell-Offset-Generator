@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  skyrim:
+    name: Build Skyrim plugin (vs2022 preset)
+    # windows-2022 on purpose: the preset targets the VS2022 generator.
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Check out source (with CommonLibVR submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Resolve vcpkg
+        shell: pwsh
+        run: |
+          $root = $env:VCPKG_ROOT
+          if (-not $root) { $root = $env:VCPKG_INSTALLATION_ROOT }
+          if (-not $root) { $root = "C:\vcpkg" }
+          if (-not (Test-Path (Join-Path $root "scripts/buildsystems/vcpkg.cmake"))) {
+            throw "Could not locate vcpkg under $root"
+          }
+          "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Configure
+        working-directory: Skyrim
+        run: cmake --preset vs2022-windows-vcpkg
+
+      - name: Build
+        run: cmake --build Skyrim/build --config Release --parallel 2
