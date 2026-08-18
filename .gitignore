@@ -1,0 +1,9 @@
+# CMake / Visual Studio
+build/
+out/
+.vs/
+CMakeUserPresets.json
+install/
+
+# vcpkg
+vcpkg_installed/
